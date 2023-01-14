@@ -3,7 +3,7 @@
 script_name("Admin Helper") 
 script_author("Bruno")
 script_description("Помощник для администрации на Namalsk RolePlay")
-script_version(1.1)
+script_version(2)
 script_dependencies("mimgui", "ffi", "encoding", "samp.events", "mimtoasts", "memory", "inicfg", "mimhotkey", "fAwesome6_solid", "moonloader")
 
 --========================================================LIB=========================================================
@@ -231,9 +231,9 @@ local binds = {
             if config.navodki.actived[0] and config.navodki.send then       
                 lua_thread.create(function()
                     config.navodki.send = false         
-                    sampAddChatMessage(string.format("%s %s %s | %s", config.navodki.data.command, config.navodki.data.id, config.navodki.data.prichina, shorten(config.navodki.data.name)), -1)
+                    sampSendChat(string.format("%s %s %s | %s", config.navodki.data.command, config.navodki.data.id, config.navodki.data.prichina, shorten(config.navodki.data.name)))
                     wait(1200)
-                    sampAddChatMessage(string.format("/a Наводка от - %s на %s - принята.", config.navodki.data.name, config.navodki.data.command), -1)
+                    sampSendChat(string.format("/a Наводка от - %s на %s - принята.", config.navodki.data.name, config.navodki.data.command))
                 end)
             end
         end
@@ -686,15 +686,15 @@ local mainFrame = imgui.OnFrame(
         imgui.Begin("Admin Helper", nil, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize)
         
         imgui.BeginGroup()
-            imgui.BeginChild("Groups", imgui.ImVec2(200, -1), true)                
+            imgui.BeginChild("Groups", imgui.ImVec2(170, -1), true)                
                 if imgui.Button(fa.ARROWS_ROTATE, imgui.ImVec2(37, 24)) then thisScript():reload() end
                 imgui.SameLine()        
                 if imgui.Button(fa.POWER_OFF, imgui.ImVec2(37, 24)) then thisScript():unload() end
                 imgui.SameLine()
                 if imgui.Button(fa.DOWNLOAD, imgui.ImVec2(37, 24)) then 
-                    downloadUrlToFile("https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/AHelper.lua", getWorkingDirectory() .. "/config/AHelper.lua", function(id, status)
+                    downloadUrlToFile("https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/AHelper.lua", getWorkingDirectory() .. "/AHelper.lua", function(id, status)
                         if status == downloadStatus.STATUS_ENDDOWNLOADDATA then
-                            toast.Show(string.format(u8"Скрипт обновлен до %s", thisScript().version), toast.TYPE.INFO, 7, ColorNotification())
+                            toast.Show(string.format(u8"Скрипт успешно обновлен", thisScript().version), toast.TYPE.INFO, 7, ColorNotification())
                         end
                     end)
                 end
@@ -707,7 +707,7 @@ local mainFrame = imgui.OnFrame(
         imgui.SameLine()        
         imgui.BeginChild("Main", imgui.ImVec2(-1, -1), true)
             if config.page[0] == 1 then
-                imgui.SetCursorPosX(50)
+                imgui.SetCursorPosX(70)
                 if imgui.HeaderButton(config.header.setting[1][0], header_name.setting[1]) then
                     config.header.setting[1][0] = true
                     config.header.setting[2][0] = false
@@ -912,7 +912,7 @@ local mainFrame = imgui.OnFrame(
             elseif config.page[0] == 3 then                 
                 for k, button in ipairs(fastButton) do
                     if button.name == "Slap Down" then
-                        imgui.SetCursorPos(imgui.ImVec2(imgui.GetWindowWidth() - 177, 184))
+                        imgui.SetCursorPos(imgui.ImVec2(imgui.GetWindowWidth() - 207, 184))
                     end
                     if imgui.Button(u8(button.name), imgui.ImVec2(160, button.name:find("Slap") and 25 or 60)) then
                         button.func()
@@ -1526,26 +1526,28 @@ function onReceivePacket(id, bs)
 end
 
 function hook.onServerMessage(color, text)
-    for k, command in ipairs(TriggerCommand) do
-        if text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+") and config.navodki.actived[0] and not isGamePaused() then
-            if text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ || .+") then
-                config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) || .+")
-            elseif text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ | .+") then
-                config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) | .+")
-            elseif text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ // .+") then
-                config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) // .+")
-            elseif text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ / .+") then
-                config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) / .+")
-            else
-                config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+)")
+    if config.navodki.actived[0] then
+        for k, command in ipairs(TriggerCommand) do
+            if text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+") and config.navodki.actived[0] and not isGamePaused() then
+                if text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ || .+") then
+                    config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) || .+")
+                elseif text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ | .+") then
+                    config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) | .+")
+                elseif text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ // .+") then
+                    config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) // .+")
+                elseif text:find("%[A%] .+ %w+_%w+%[%d+%]: " .. command .. " %d+ .+ / .+") then
+                    config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+) / .+")
+                else
+                    config.navodki.data.name, config.navodki.data.id, config.navodki.data.prichina = text:match("%[A%] .+ (%w+_%w+)%[%d+%]: " .. command .. " (%d+) (.+)")
+                end
+                toast.Show(string.format(u8"Пришла наводка от %s на %s", config.navodki.data.name, command), toast.TYPE.INFO, 5, ColorNotification())
+                config.navodki.data.command = command
+                lua_thread.create(function()
+                    config.navodki.send = true
+                    wait(config.navodki.time[0])
+                    config.navodki.send = false                                            
+                end)   
             end
-            toast.Show(string.format(u8"Пришла наводка от %s на %s", config.navodki.data.name, command), toast.TYPE.INFO, 5, ColorNotification())
-            config.navodki.data.command = command
-            lua_thread.create(function()
-                config.navodki.send = true
-                wait(config.navodki.time[0])
-                config.navodki.send = false                                            
-            end)   
         end
     end
 
