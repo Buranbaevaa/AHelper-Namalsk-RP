@@ -3,7 +3,7 @@
 script_name("Admin Helper") 
 script_author("Bruno")
 script_description("Помощник для администрации на Namalsk RolePlay")
-script_version("1.1")
+script_version(1.1)
 script_dependencies("mimgui", "ffi", "encoding", "samp.events", "mimtoasts", "memory", "inicfg", "mimhotkey", "fAwesome6_solid", "moonloader")
 
 --========================================================LIB=========================================================
@@ -23,8 +23,7 @@ local downloadStatus = require('moonloader').download_status
 --========================================================CONFIG=========================================================
 
 local mainIni = inicfg.load({
-    config = {  
-        version = "1.2",              
+    config = {                       
         afly = false,
         togphone = false,
         check = false,
@@ -79,7 +78,7 @@ local mainIni = inicfg.load({
 
     serverInfo = {
         serverIP = "",
-        serverPort = nil
+        serverPort = ""
     }
 
 }, "AHelper.ini")
@@ -636,46 +635,41 @@ function main()
             end
         end
 
-        if isKeyJustPressed(161) then 
+        if isKeyJustPressed(161) and config.airbreak.actived[0] then 
             config.airbreak.AirBreak = not config.airbreak.AirBreak 
             setCharCollision(PLAYER_PED, not config.airbreak.AirBreak)
         end
-        if config.airbreak.actived[0] then
-            if config.airbreak.AirBreak then
-                if not isKeyDown(161) and not isCharInAnyCar(PLAYER_PED) then
-                    local x, y, z = getCharCoordinates(PLAYER_PED)
-                    local camX, camY, camZ = getActiveCameraCoordinates()
-                    local head = math.rad(getHeadingFromVector2d(x-camX, y-camY))
-                    if isKeyDown(87) and not sampIsCursorActive() then
-                        x = x-math.sin(-head+3.14)*config.airbreak.speed[0]
-                        y = y-math.cos(-head+3.14)*config.airbreak.speed[0]
-                    elseif isKeyDown(83) and not sampIsCursorActive() then
-                        x = x+math.sin(-head+3.14)*config.airbreak.speed[0]
-                        y = y+math.cos(-head+3.14)*config.airbreak.speed[0]
-                    end
-
-                    if isKeyDown(65) and not sampIsCursorActive() then
-                        local head = math.rad(math.deg(head)+90)
-                        x = x-math.sin(-head+3.14)*config.airbreak.speed[0]
-                        y = y-math.cos(-head+3.14)*config.airbreak.speed[0]
-                    elseif isKeyDown(68) and not sampIsCursorActive() then
-                        local head = math.rad(math.deg(head)-90)
-                        x = x-math.sin(-head+3.14)*config.airbreak.speed[0]
-                        y = y-math.cos(-head+3.14)*config.airbreak.speed[0]
-                    end
-
-                    if isKeyDown(81) and not sampIsCursorActive() then
-                        local head = math.rad(math.deg(head)+90)
-                        z = z-config.airbreak.speed[0]                    
-                    elseif isKeyDown(69) and not sampIsCursorActive() then
-                        local head = math.rad(math.deg(head)-90)
-                        z = z+config.airbreak.speed[0]                    
-                    end                                        
-                    
-                    -- setCharCollision(PLAYER_PED, false)
-                    setCharHeading(PLAYER_PED, math.deg(head))
-                    setCharCoordinates(PLAYER_PED, x, y, z-1)                    
+        if config.airbreak.actived[0] and config.airbreak.AirBreak then            
+            if not isKeyDown(161) and not isCharInAnyCar(PLAYER_PED) then
+                local x, y, z = getCharCoordinates(PLAYER_PED)
+                local camX, camY, camZ = getActiveCameraCoordinates()
+                local head = math.rad(getHeadingFromVector2d(x-camX, y-camY))
+                if isKeyDown(87) and not sampIsCursorActive() then
+                    x = x-math.sin(-head+3.14)*config.airbreak.speed[0]
+                    y = y-math.cos(-head+3.14)*config.airbreak.speed[0]
+                elseif isKeyDown(83) and not sampIsCursorActive() then
+                    x = x+math.sin(-head+3.14)*config.airbreak.speed[0]
+                    y = y+math.cos(-head+3.14)*config.airbreak.speed[0]
                 end
+
+                if isKeyDown(65) and not sampIsCursorActive() then
+                    local head = math.rad(math.deg(head)+90)
+                    x = x-math.sin(-head+3.14)*config.airbreak.speed[0]
+                    y = y-math.cos(-head+3.14)*config.airbreak.speed[0]
+                elseif isKeyDown(68) and not sampIsCursorActive() then
+                    local head = math.rad(math.deg(head)-90)
+                    x = x-math.sin(-head+3.14)*config.airbreak.speed[0]
+                    y = y-math.cos(-head+3.14)*config.airbreak.speed[0]
+                end
+
+                if isKeyDown(81) and not sampIsCursorActive() then                    
+                    z = z-config.airbreak.speed[0]                    
+                elseif isKeyDown(69) and not sampIsCursorActive() then                    
+                    z = z+config.airbreak.speed[0]                    
+                end                                        
+                                
+                setCharHeading(PLAYER_PED, math.deg(head))
+                setCharCoordinates(PLAYER_PED, x, y, z-1)                    
             end
         end
     end
@@ -696,6 +690,14 @@ local mainFrame = imgui.OnFrame(
                 if imgui.Button(fa.ARROWS_ROTATE, imgui.ImVec2(37, 24)) then thisScript():reload() end
                 imgui.SameLine()        
                 if imgui.Button(fa.POWER_OFF, imgui.ImVec2(37, 24)) then thisScript():unload() end
+                imgui.SameLine()
+                if imgui.Button(fa.DOWNLOAD, imgui.ImVec2(37, 24)) then 
+                    downloadUrlToFile("https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/AHelper.lua", getWorkingDirectory() .. "/config/AHelper.lua", function(id, status)
+                        if status == downloadStatus.STATUS_ENDDOWNLOADDATA then
+                            toast.Show(string.format(u8"Скрипт обновлен до %s", thisScript().version), toast.TYPE.INFO, 7, ColorNotification())
+                        end
+                    end)
+                end
 
                 imgui.Separator()
                 imgui.CustomMenu({u8"Настройки", u8"Дополнительно", u8"Кнопочки", u8"Информация"}, config.page, imgui.ImVec2(130, 45))                
@@ -1503,7 +1505,7 @@ function onScriptTerminate(scr, quitGame)
         if not quitGame then
             mainIni.serverInfo.serverIP, mainIni.serverInfo.serverPort = sampGetCurrentServerAddress()
 
-            if config.airbreak.AirBreak then
+            if config.airbreak.AirBreak and config.airbreak.actived[0] then
                 setCharCollision(PLAYER_PED, true)
             end
         end        
@@ -1617,15 +1619,16 @@ end
 --========================================================OTHER========================================================
 
 function checkUpdate()
-    downloadUrlToFile(update_url, string.format(getWorkingDirectory(), "config/AHelper.ini"), function(id, status)
-        if status == downloadStatus.STATUS_ENDDOWNLOADDATA then            
-            if mainIni.config.version > thisScript().version then 
-                toast.Show(string.format("Доступна новая версия скрипта %s", mainIni.config.version), toast.TYPE.INFO, 7, ColorNotification())
-            end            
+    local updatePath = getWorkingDirectory() .. "/config/update.ini"    
+    downloadUrlToFile("https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/config/update.ini", updatePath, function(id, status)
+        if status == downloadStatus.STATUS_ENDDOWNLOADDATA then        
+            local updateIni = inicfg.load(nil, updatePath)   
+            if tostring(updateIni.info.version) > thisScript().version then 
+                toast.Show(string.format(u8"Доступна новая версия скрипта %s", updateIni.info.version), toast.TYPE.INFO, 7, ColorNotification())
+            end 
+            os.remove(updatePath)           
         end
-    end)
-    sampAddChatMessage(mainIni.config.version, -1)
-    sampAddChatMessage(thisScript().version, -1)
+    end)    
 end
 
 function freezeChar(actived)
