@@ -3,7 +3,7 @@
 script_name("Admin Helper") 
 script_author("Bruno")
 script_description("Помощник для администрации на Namalsk RolePlay")
-script_version(2)
+script_version(2.0)
 script_dependencies("mimgui", "ffi", "encoding", "samp.events", "mimtoasts", "memory", "inicfg", "mimhotkey", "fAwesome6_solid", "moonloader")
 
 --========================================================LIB=========================================================
@@ -103,6 +103,7 @@ local ToU32 = imgui.ColorConvertFloat4ToU32
 local sw, sh = getScreenResolution()
 local fontCarInfo = renderCreateFont("Arial", 8, fontFlag.BOLD + fontFlag.SHADOW)
 local fontAdm = renderCreateFont("Arial", 9)
+local fontWh = renderCreateFont("Arial", 9, fontFlag.BOLD + fontFlag.SHADOW)
 
 --========================================================TABLES=========================================================
 
@@ -117,7 +118,7 @@ local header_name = {
 }
 
 local admins = {
-    [7771] = {
+    [7228] = {
         ["Andrey_Astrovskiy"] = "Главный Администратор",
         ["Danil_Bragin"] = "Заместитель Главного Администратора",
         ["Artem_Mitoff"] = "Куратор",
@@ -150,10 +151,19 @@ local config = {
     afly = new.bool(mainIni.config.afly),
     togphone = new.bool(mainIni.config.togphone),
     hp = new.bool(mainIni.config.hp),
-
-    header = {
-        setting = {new.bool(true), new.bool(), new.bool(), new.bool()}, 
-        additionally = {new.bool(true), new.bool()}
+    
+    header = {        
+        setting = {
+            {name = u8"Основные настройки", actived = new.bool(true)}, 
+            {name = u8"Дополнительные настройки", actived = new.bool()},
+            {name = u8"Серверные настройки", actived = new.bool()},
+            {name = u8"Настройки интерфейса", actived = new.bool()}                  
+        },        
+        additionally = {
+            {name = u8"Настройки софта", actived = new.bool(true)}, 
+            {name = u8"Настройки трейсеров", actived = new.bool()},
+            {name = u8"Настройки рекона", actived = new.bool()}                            
+        }        
     },
 
     airbreak = {
@@ -293,9 +303,10 @@ local fastButton = {
     {
         name = "Очистить чат", 
         func = function() 
-            memory.fill(sampGetChatInfoPtr() + 306, 0x0, 25200)
-            memory.write(sampGetChatInfoPtr() + 306, 25562, 4, 0x0)
-            memory.write(sampGetChatInfoPtr() + 0x63DA, 1, 1)
+            local chatInfoPtr = sampGetChatInfoPtr()
+            memory.fill(chatInfoPtr + 306, 0x0, 25200)
+            memory.write(chatInfoPtr + 306, 25562, 4, 0x0)
+            memory.write(chatInfoPtr + 0x63DA, 1, 1)
         end
     },
 
@@ -566,7 +577,6 @@ local vehicle = {
 
 function main()
     while not isSampAvailable() do wait(100) end  
-
     checkUpdate()
     
     hotkey.RegisterCallback("menu", binds.menu.keys, binds.menu.callback)
@@ -584,36 +594,43 @@ function main()
 
     sampAddChatMessage(string.format("[Admin Helper]{FFFFFF} успешно загружен. Активация меню: {7FFFD4}%s", hotkey.GetBindKeys(decodeJson(mainIni.keys.menu))), 0x7FFFD4)
 
-    if sampIsLocalPlayerSpawned() and config.togphone[0] then sampSendChat("/togphone") end
+    if sampIsLocalPlayerSpawned() and config.togphone[0] then 
+        sampSendChat("/togphone") 
+    end
 
 --========================================================WHILE TRUE========================================================
 
-    while true do wait(0)
+    while true do wait(0) 
+        if config.wallhack.actived[0] then
+            wallHack()
+        end
+
         sw, sh = getScreenResolution()
-        if getCharHealth(PLAYER_PED) < 100 and config.hp[0] then sampSendChat("/hp") end
+        if getCharHealth(PLAYER_PED) < 100 and config.hp[0] then 
+            sampSendChat("/hp") 
+        end
 
         if config.checker.setting then
             mainIni.checker.posX, mainIni.checker.posY = getCursorPos()            
         end
 
         if config.checker.actived[0] then
-            local text = "Администрация онлайн:\n"
-            for id = 0, 999 do
-                if sampIsPlayerConnected(id) then
-                    if admins[mainIni.serverInfo.serverPort] then
+            if admins[mainIni.serverInfo.serverPort] then
+                local text = "Администрация онлайн:\n"
+                for id = 0, 999 do
+                    if sampIsPlayerConnected(id) then                    
                         for name, post in pairs(admins[mainIni.serverInfo.serverPort]) do
                             if sampGetPlayerNickname(id) == name then
                                 text = string.format("%s%s[%s] - %s\n", text, name, id, post)                            
                             end
-                        end
-                    else
-                        toast.Show(u8"Ошибка в получении данных сервера.", toast.TYPE.INFO, 7, ColorNotification())
-                        config.checker.actived[0] = false   
-                        break                     
+                        end                    
                     end
                 end
+                renderFontDrawText(fontAdm, text, mainIni.checker.posX, mainIni.checker.posY, 0xFFFFFFFF) 
+            else
+                toast.Show(u8"Ошибка в получении данных сервера.", toast.TYPE.INFO, 7, ColorNotification())
+                config.checker.actived[0] = false                      
             end
-            renderFontDrawText(fontAdm, text, mainIni.checker.posX, mainIni.checker.posY, 0xFFFFFFFF) 
         end
 
         if config.carInfo.actived[0] then            
@@ -623,8 +640,8 @@ function main()
                         local cx, cy, cz = getCarCoordinates(veh)
                         local x, y = convert3DCoordsToScreen(cx, cy, cz+0.5) 
                         local text = 
-                            (config.carInfo.data.model[0] and string.format("Model: %s | ", vehicle[getCarModel(veh)].name) or "") ..
-                            (config.carInfo.data.id[0] and string.format("ID: %s", select(2, sampGetVehicleIdByCarHandle(veh))) or "") .. 
+                            (config.carInfo.data.model[0] and string.format("Model: %s", vehicle[getCarModel(veh)].name) or "") ..
+                            (config.carInfo.data.id[0] and string.format(" | ID: %s", select(2, sampGetVehicleIdByCarHandle(veh))) or "") .. 
                             (config.carInfo.data.engine[0] and string.format("\nДвигатель: %s", isCarEngineOn(veh) and "Включен" or "Выключен") or "") .. 
                             (config.carInfo.data.hp[0] and string.format("\nHP: %s", getCarHealth(veh)) or "") ..
                             (config.carInfo.data.dist[0] and string.format("\nДистацния: %s", math.floor(getDistanceBetweenCoords3d(cx, cy, cz, getCharCoordinates(PLAYER_PED)))) or "")                              
@@ -708,42 +725,26 @@ local mainFrame = imgui.OnFrame(
         imgui.BeginChild("Main", imgui.ImVec2(-1, -1), true)
             if config.page[0] == 1 then
                 imgui.SetCursorPosX(70)
-                if imgui.HeaderButton(config.header.setting[1][0], header_name.setting[1]) then
-                    config.header.setting[1][0] = true
-                    config.header.setting[2][0] = false
-                    config.header.setting[3][0] = false
-                    config.header.setting[4][0] = false
-                end
-                imgui.SameLine()
-                if imgui.HeaderButton(config.header.setting[2][0], header_name.setting[2]) then
-                    config.header.setting[1][0] = false
-                    config.header.setting[2][0] = true
-                    config.header.setting[3][0] = false
-                    config.header.setting[4][0] = false
-                end
-                imgui.SameLine()
-                if imgui.HeaderButton(config.header.setting[3][0], header_name.setting[3]) then
-                    config.header.setting[1][0] = false
-                    config.header.setting[2][0] = false
-                    config.header.setting[3][0] = true
-                    config.header.setting[4][0] = false
-                end
-                imgui.SameLine()
-                if imgui.HeaderButton(config.header.setting[4][0], header_name.setting[4]) then
-                    config.header.setting[1][0] = false
-                    config.header.setting[2][0] = false
-                    config.header.setting[3][0] = false
-                    config.header.setting[4][0] = true
+                for i, data in ipairs(config.header.setting) do
+                    if imgui.HeaderButton(data.actived[0], data.name) then
+                        for k, v in ipairs(config.header.setting) do
+                            v.actived[0] = k == i                        
+                        end                         
+                    end
+    
+                    if i ~= #config.header.setting then
+                        imgui.SameLine() 
+                    end
                 end
 
                 imgui.SetCursorPos(imgui.ImVec2(30, 50))
                 imgui.BeginGroup()
-                    if config.header.setting[1][0] then                                       
+                    if config.header.setting[1].actived[0] then                                       
                         imgui.Text(u8"Настройки Wallhack")
                         if imgui.Checkbox(u8"Включить/Выключить##wh", config.wallhack.actived) then
                             toast.Show(config.wallhack.actived[0] and u8"Скрипт WALLHACK успешно включён" or u8"Скрипт WALLHACK успешно выключен", toast.TYPE.INFO, 7, ColorNotification())
                             mainIni.wallhack.actived = config.wallhack.actived[0]
-                            inicfg.save(mainIni, "AHelper.ini")
+                            inicfg.save(mainIni, "AHelper.ini")                            
                         end
                         
                         imgui.Separator()
@@ -754,7 +755,7 @@ local mainFrame = imgui.OnFrame(
                             inicfg.save(mainIni, "AHelper.ini")
                         end                       
 
-                    elseif config.header.setting[2][0] then                    
+                    elseif config.header.setting[2].actived[0] then                    
                         imgui.BeginChild("Наводки", imgui.ImVec2(550, 150), true)                        
                             imgui.Text(u8"Настройки: Наводки")
                             imgui.SetCursorPos(imgui.ImVec2(0, 37))
@@ -803,7 +804,7 @@ local mainFrame = imgui.OnFrame(
                             end
                         imgui.EndChild()
 
-                    elseif config.header.setting[3][0] then                    
+                    elseif config.header.setting[3].actived[0] then                    
                         imgui.Text(u8"Настройки серверных приколюх")
                         if imgui.Checkbox(u8"Выключать телефон автоматически при входе", config.togphone) then
                             toast.Show(config.togphone[0] and u8"Теперь при заходе на сервер у вас будет отключаться телефон" or u8"Теперь при заходе на сервер у вас будет включаться телефон", toast.TYPE.INFO, 7, ColorNotification())
@@ -874,18 +875,20 @@ local mainFrame = imgui.OnFrame(
 
             elseif config.page[0] == 2 then
                 imgui.SetCursorPosX(220)
-                if imgui.HeaderButton(config.header.additionally[1][0], header_name.additionally[1]) then
-                    config.header.additionally[1][0] = true
-                    config.header.additionally[2][0] = false
-                end
-                imgui.SameLine()
-                if imgui.HeaderButton(config.header.additionally[2][0], header_name.additionally[2]) then
-                    config.header.additionally[1][0] = false
-                    config.header.additionally[2][0] = true
-                end
+                for i, data in ipairs(config.header.additionally) do
+                    if imgui.HeaderButton(data.actived[0], data.name) then
+                        for k, v in ipairs(config.header.additionally) do
+                            v.actived[0] = k == i                        
+                        end                         
+                    end
+    
+                    if i ~= #config.header.additionally then
+                        imgui.SameLine() 
+                    end
+                end                
 
                 imgui.SetCursorPos(imgui.ImVec2(30, 50))
-                if config.header.additionally[1][0] then                    
+                if config.header.additionally[1].actived[0] then                    
                     imgui.BeginChild("AirBreak", imgui.ImVec2(300, 110), true)
                         imgui.Text(u8"Настройки: AirBreak")
                         imgui.BeginGroup()
@@ -905,6 +908,8 @@ local mainFrame = imgui.OnFrame(
                             end
                         imgui.EndGroup()
                     imgui.EndChild()
+                elseif config.header.additionally[1].actived[0] then
+
                 else
 
                 end
@@ -1504,6 +1509,7 @@ function onScriptTerminate(scr, quitGame)
     if scr == thisScript() then
         if not quitGame then
             mainIni.serverInfo.serverIP, mainIni.serverInfo.serverPort = sampGetCurrentServerAddress()
+            inicfg.save(mainIni, "AHelper.ini")
 
             if config.airbreak.AirBreak and config.airbreak.actived[0] then
                 setCharCollision(PLAYER_PED, true)
@@ -1520,8 +1526,9 @@ end
 
 function onReceivePacket(id, bs) 
     if id == 34 then
-        serverIP = raknetBitStreamReadInt32(bs)
-        serverPort = raknetBitStreamReadInt16(bs)
+        mainIni.serverInfo.serverIP = raknetBitStreamReadInt32(bs)
+        mainIni.serverInfo.serverPort = raknetBitStreamReadInt16(bs)
+        inicfg.save(mainIni, "AHelper.ini")
     end
 end
 
@@ -1619,6 +1626,12 @@ function onWindowMessage(msg, wparam, lparam)
 end
 
 --========================================================OTHER========================================================
+
+function wallHack()
+    local sampSettings = sampGetServerSettingsPtr()
+    memory.setfloat(sampSettings + 0x27, 300.00, true)
+    memory.setint8(sampSettings + 0x2F, 0)        
+end
 
 function checkUpdate()
     local updatePath = getWorkingDirectory() .. "/config/update.ini"    
