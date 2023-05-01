@@ -1,4 +1,7 @@
 {
   "version": "1.0",
-  "updateUrl": "https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/AHelper.lua"
+  "files": {
+    {url = "https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/AHelper.lua", path = "AHelper.lua"},
+    {url = "https://raw.githubusercontent.com/egaaaaaaaaaaaaaaaaa/AHelper-Namalsk-RP/main/release/config.update.ini", path = "AHelper/update.ini"}
+  }
 }
